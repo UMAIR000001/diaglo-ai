@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: "Figtree", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Primary: Vibrant teal — premium, medical, trustworthy */
+  --color-primary: #0d9488;
+  --color-on-primary: #ffffff;
+  --color-primary-light: #ccfbf1;
+
+  /* Secondary: Lighter teal */
+  --color-secondary: #14b8a6;
+
+  /* Accent: Warm amber — glucose highlights, energy */
+  --color-accent: #f59e0b;
+  --color-accent-light: #fef3c7;
+
+  /* Backgrounds — slate palette for premium clean feel */
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-destructive: #ef4444;
+  --color-ring: #0d9488;
+
+  /* Extended */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+}
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus visible rings — accessible keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth transitions on interactive elements */
+button, a, input, select, textarea {
+  transition: all 150ms ease-out;
+}
+
+/* Clickable elements cursor */
+button, a, [role="button"], select, label {
+  cursor: pointer;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Custom keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
