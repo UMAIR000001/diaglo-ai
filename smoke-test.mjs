@@ -38,20 +38,17 @@ try {
   }
 
   // === STEP 1: Age, Gender, Height, Weight ===
-  const inputs1 = page.locator('input');
-  const inputCount1 = await inputs1.count();
-  results.push('Step1 inputs: ' + inputCount1);
-
-  // Fill Age (first input, type=number)
-  if (inputCount1 >= 1) await inputs1.nth(0).fill('30');
-  if (inputCount1 >= 2) await inputs1.nth(1).fill('170'); // height
-  if (inputCount1 >= 3) await inputs1.nth(2).fill('72');  // weight
+  // Use label-based locators to avoid picking up hidden inputs (e.g. agent chat)
+  await page.getByLabel('Age').fill('30');
+  await page.getByLabel('Height').fill('170');
+  await page.getByLabel('Weight').fill('72');
+  results.push('✅ Filled Age, Height, Weight');
 
   // Select gender
-  const genderBtn = page.getByRole('radio').first();
+  const genderBtn = page.getByRole('radio', { name: 'Male' });
   if (await genderBtn.isVisible()) {
     await genderBtn.click();
-    results.push('✅ Gender selected: ' + (await genderBtn.textContent()));
+    results.push('✅ Gender selected: Male');
   }
 
   // Click Next
