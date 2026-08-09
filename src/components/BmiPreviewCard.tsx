@@ -32,9 +32,33 @@ function getCategory(bmi: number): BmiCategory {
   return CATEGORIES[CATEGORIES.length - 1];
 }
 
-/** Clamp BMI position on the scale into [0, 1] */
+/**
+ * Map a BMI value to a 0–1 scale position using quarter-based segments.
+ * Each category (Underweight / Normal / Overweight / Obese) occupies
+ * exactly 25 % of the bar width, matching the standard clinical scale.
+ *
+ *   Underweight  (BMI < 18.5)   →  0.00 – 0.25
+ *   Normal       (BMI 18.5–24.9) →  0.25 – 0.50
+ *   Overweight   (BMI 25–29.9)   →  0.50 – 0.75
+ *   Obese        (BMI ≥ 30)      →  0.75 – 1.00
+ */
 function bmiToPercent(bmi: number): number {
-  return Math.min(1, Math.max(0, (bmi - BMI_MIN) / (BMI_MAX - BMI_MIN)));
+  const clamped = Math.min(BMI_MAX, Math.max(BMI_MIN, bmi));
+
+  if (clamped < 18.5) {
+    // Underweight: BMI 10–18.49 → 0.00–0.25
+    return ((clamped - BMI_MIN) / (18.5 - BMI_MIN)) * 0.25;
+  }
+  if (clamped < 25) {
+    // Normal: BMI 18.5–24.99 → 0.25–0.50
+    return 0.25 + ((clamped - 18.5) / (25 - 18.5)) * 0.25;
+  }
+  if (clamped < 30) {
+    // Overweight: BMI 25–29.99 → 0.50–0.75
+    return 0.5 + ((clamped - 25) / (30 - 25)) * 0.25;
+  }
+  // Obese: BMI 30–40 → 0.75–1.00
+  return Math.min(1, 0.75 + ((clamped - 30) / (BMI_MAX - 30)) * 0.25);
 }
 
 export default function BmiPreviewCard({ heightCm, weightKg }: BmiPreviewCardProps) {
@@ -75,73 +99,76 @@ export default function BmiPreviewCard({ heightCm, weightKg }: BmiPreviewCardPro
         </span>
       </div>
 
-      {/* ── Visual scale bar ──────────────────────────────────── */}
-      <div className="relative h-2 w-full rounded-full bg-muted overflow-hidden">
-        {/* Coloured segments */}
-        <div className="absolute inset-0 flex">
+      {/* ── Scale section (bar + labels + pointer) ─────────────── */}
+      <div className="relative">
+        {/* ── Visual scale bar ────────────────────────────────── */}
+        <div className="relative h-2 w-full rounded-full bg-muted overflow-hidden">
+          {/* Coloured segments */}
+          <div className="absolute inset-0 flex">
+            {CATEGORIES.map((cat) => {
+              const leftPct = bmiToPercent(cat.min);
+              const rightPct = bmiToPercent(cat.max + 0.01);
+              const widthPct = ((rightPct - leftPct) / 1) * 100;
+              return (
+                <div
+                  key={cat.label}
+                  className="h-full first:rounded-l-full last:rounded-r-full"
+                  style={{
+                    width: `${widthPct}%`,
+                    backgroundColor: cat.color,
+                    opacity: 0.25,
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Active range highlight */}
+          <div
+            className="absolute top-0 h-full rounded-full transition-all duration-300 ease-out"
+            style={{
+              left: `${Math.max(0, percent * 100 - 2)}%`,
+              width: "4%",
+              backgroundColor: category.color,
+              opacity: 0.7,
+            }}
+          />
+        </div>
+
+        {/* ── Scale labels ────────────────────────────────────── */}
+        <div className="relative mt-1.5 h-4">
+          {/* Tick marks + labels for each category midpoint */}
           {CATEGORIES.map((cat) => {
-            const leftPct = bmiToPercent(cat.min);
-            const rightPct = bmiToPercent(cat.max + 0.01);
-            const widthPct = ((rightPct - leftPct) / 1) * 100;
+            const mid = (Math.max(cat.min, BMI_MIN) + Math.min(cat.max, BMI_MAX)) / 2;
+            const leftPct = bmiToPercent(mid) * 100;
             return (
-              <div
+              <span
                 key={cat.label}
-                className="h-full first:rounded-l-full last:rounded-r-full"
-                style={{
-                  width: `${widthPct}%`,
-                  backgroundColor: cat.color,
-                  opacity: 0.25,
-                }}
-              />
+                className="absolute -translate-x-1/2 text-[10px] font-medium text-foreground/40 whitespace-nowrap"
+                style={{ left: `${leftPct}%` }}
+              >
+                {cat.label}
+              </span>
             );
           })}
         </div>
 
-        {/* Active range highlight */}
+        {/* ── Pointer / marker ────────────────────────────────── */}
         <div
-          className="absolute top-0 h-full rounded-full transition-all duration-300 ease-out"
-          style={{
-            left: `${Math.max(0, percent * 100 - 2)}%`,
-            width: "4%",
-            backgroundColor: category.color,
-            opacity: 0.7,
-          }}
-        />
-      </div>
-
-      {/* ── Scale labels ──────────────────────────────────────── */}
-      <div className="relative mt-1.5 h-4">
-        {/* Tick marks + labels for each category midpoint */}
-        {CATEGORIES.map((cat) => {
-          const mid = (cat.min + Math.min(cat.max, BMI_MAX)) / 2;
-          const leftPct = bmiToPercent(mid) * 100;
-          return (
-            <span
-              key={cat.label}
-              className="absolute -translate-x-1/2 text-[10px] font-medium text-foreground/40 whitespace-nowrap"
-              style={{ left: `${leftPct}%` }}
-            >
-              {cat.label}
-            </span>
-          );
-        })}
-      </div>
-
-      {/* ── Pointer / marker ──────────────────────────────────── */}
-      <div
-        className="relative mt-1 flex items-center justify-center transition-all duration-300 ease-out"
-        style={{ marginLeft: `${percent * 100}%` }}
-      >
-        <div className="flex flex-col items-center -ml-1">
-          {/* Triangle pointer */}
-          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
-            <path d="M5 6L0 0h10L5 6Z" fill={category.color} />
-          </svg>
-          {/* Dot */}
-          <div
-            className="h-2.5 w-2.5 rounded-full ring-2 ring-white shadow-sm"
-            style={{ backgroundColor: category.color }}
-          />
+          className="absolute -translate-x-1/2 transition-all duration-300 ease-out"
+          style={{ left: `${percent * 100}%`, top: "28px" }}
+        >
+          <div className="flex flex-col items-center">
+            {/* Triangle pointer */}
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+              <path d="M5 6L0 0h10L5 6Z" fill={category.color} />
+            </svg>
+            {/* Dot */}
+            <div
+              className="h-2.5 w-2.5 rounded-full ring-2 ring-white shadow-sm"
+              style={{ backgroundColor: category.color }}
+            />
+          </div>
         </div>
       </div>
     </div>
