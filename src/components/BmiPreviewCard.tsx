@@ -15,20 +15,21 @@ interface BmiCategory {
   textColor: string;
 }
 
-const CATEGORIES: BmiCategory[] = [
-  { label: "Underweight", min: 0, max: 18.49, color: "#3B82F6", bgColor: "bg-blue-100", textColor: "text-blue-700" },
-  { label: "Normal",      min: 18.5, max: 24.99, color: "#16A34A", bgColor: "bg-green-100", textColor: "text-green-700" },
-  { label: "Overweight",  min: 25.0, max: 29.99, color: "#D97706", bgColor: "bg-amber-100", textColor: "text-amber-700" },
-  { label: "Obese",       min: 30.0, max: 99,    color: "#DC2626", bgColor: "bg-red-100",   textColor: "text-red-700" },
-];
-
 const BMI_MAX = 40; // scale caps at 40 for visual consistency
 const BMI_MIN = 10;
 
+const CATEGORIES: BmiCategory[] = [
+  { label: "Underweight", min: BMI_MIN, max: 18.5,  color: "#3B82F6", bgColor: "bg-blue-100",  textColor: "text-blue-700" },
+  { label: "Normal",      min: 18.5,   max: 25,    color: "#16A34A", bgColor: "bg-green-100", textColor: "text-green-700" },
+  { label: "Overweight",  min: 25,     max: 30,    color: "#D97706", bgColor: "bg-amber-100", textColor: "text-amber-700" },
+  { label: "Obese",       min: 30,     max: BMI_MAX, color: "#DC2626", bgColor: "bg-red-100",  textColor: "text-red-700" },
+];
+
 function getCategory(bmi: number): BmiCategory {
   for (const cat of CATEGORIES) {
-    if (bmi >= cat.min && bmi <= cat.max) return cat;
+    if (bmi >= cat.min && bmi < cat.max) return cat;
   }
+  // bmi === BMI_MAX or beyond — return last category
   return CATEGORIES[CATEGORIES.length - 1];
 }
 
@@ -107,8 +108,8 @@ export default function BmiPreviewCard({ heightCm, weightKg }: BmiPreviewCardPro
           <div className="absolute inset-0 flex">
             {CATEGORIES.map((cat) => {
               const leftPct = bmiToPercent(cat.min);
-              const rightPct = bmiToPercent(cat.max + 0.01);
-              const widthPct = ((rightPct - leftPct) / 1) * 100;
+              const rightPct = bmiToPercent(cat.max);
+              const widthPct = (rightPct - leftPct) * 100;
               return (
                 <div
                   key={cat.label}
@@ -156,7 +157,7 @@ export default function BmiPreviewCard({ heightCm, weightKg }: BmiPreviewCardPro
         {/* ── Pointer / marker ────────────────────────────────── */}
         <div
           className="absolute -translate-x-1/2 transition-all duration-300 ease-out"
-          style={{ left: `${percent * 100}%`, top: "28px" }}
+          style={{ left: `${Math.max(0, Math.min(100, percent * 100))}%`, top: "28px" }}
         >
           <div className="flex flex-col items-center">
             {/* Triangle pointer */}
