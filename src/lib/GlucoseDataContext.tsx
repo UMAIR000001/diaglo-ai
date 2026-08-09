@@ -1,46 +1,171 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  type ReactNode,
+} from "react";
+import { supabase } from "./supabaseClient";
 
 export interface GlucoseEntry {
+  id: string;
   day: string;
   glucose: number;
   label: string;
+  meal?: string | null;
+  medication_taken?: boolean | null;
+  insight_text?: string | null;
+  created_at: string;
 }
 
 interface GlucoseDataContextType {
   entries: GlucoseEntry[];
-  addGlucoseReading: (glucose: number) => void;
+  loading: boolean;
+  addGlucoseReading: (
+    glucose: number,
+    meal?: string,
+    medicationTaken?: boolean,
+    insightText?: string,
+  ) => Promise<void>;
 }
 
 const GlucoseDataContext = createContext<GlucoseDataContextType | null>(null);
 
-/* ── 6 days of seeded mock data (Mon–Sat) ──────────────────────────── */
-const SEEDED_ENTRIES: GlucoseEntry[] = [
-  { day: "Mon", glucose: 118, label: "Monday" },
-  { day: "Tue", glucose: 132, label: "Tuesday" },
-  { day: "Wed", glucose: 168, label: "Wednesday" },
-  { day: "Thu", glucose: 125, label: "Thursday" },
-  { day: "Fri", glucose: 172, label: "Friday" },
-  { day: "Sat", glucose: 138, label: "Saturday" },
-];
+/** Format a timestamp into a short day label like "Mon", "Tue" etc. */
+function formatDayLabel(iso: string): string {
+  const date = new Date(iso);
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const today = new Date();
+  const isToday =
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
+
+  if (isToday) return "Today";
+
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) return "Yesterday";
+
+  return days[date.getDay()];
+}
+
+/** Format a short date string like "Mon 22 Jul" from an ISO string */
+function formatLabel(iso: string): string {
+  const date = new Date(iso);
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
+}
 
 export function GlucoseDataProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useState<GlucoseEntry[]>(SEEDED_ENTRIES);
+  const [entries, setEntries] = useState<GlucoseEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addGlucoseReading = useCallback((glucose: number) => {
-    setEntries((prev) => {
-      // If we already have a "Today" entry, replace it; otherwise append
-      const hasToday = prev[prev.length - 1]?.day === "Today";
-      if (hasToday) {
-        const updated = [...prev];
-        updated[updated.length - 1] = { day: "Today", glucose, label: "Today" };
-        return updated;
+  /** Fetch the last 7 entries from Supabase, ordered by created_at ascending */
+  const fetchLogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("daily_logs")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(7);
+
+      if (error) {
+        console.error("Error fetching daily logs:", error);
+        setEntries([]);
+        return;
       }
-      return [...prev, { day: "Today", glucose, label: "Today" }];
-    });
+
+      const mapped: GlucoseEntry[] = (data ?? []).map((row) => ({
+        id: row.id,
+        day: formatDayLabel(row.created_at),
+        glucose: row.glucose_level,
+        label: formatLabel(row.created_at),
+        meal: row.meal,
+        medication_taken: row.medication_taken,
+        insight_text: row.insight_text,
+        created_at: row.created_at,
+      }));
+
+      setEntries(mapped);
+    } catch (err) {
+      console.error("Failed to fetch logs:", err);
+      setEntries([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  // Fetch logs on mount
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  /** Insert a new glucose reading into Supabase and update local state */
+  const addGlucoseReading = useCallback(
+    async (
+      glucose: number,
+      meal?: string,
+      medicationTaken?: boolean,
+      insightText?: string,
+    ) => {
+      try {
+        const { data, error } = await supabase
+          .from("daily_logs")
+          .insert({
+            glucose_level: glucose,
+            meal: meal ?? null,
+            medication_taken: medicationTaken ?? null,
+            insight_text: insightText ?? null,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error inserting glucose reading:", error);
+          return;
+        }
+
+        // Add the new entry locally and re-sort + trim to last 7
+        const newEntry: GlucoseEntry = {
+          id: data.id,
+          day: "Today",
+          glucose: data.glucose_level,
+          label: formatLabel(data.created_at),
+          meal: data.meal,
+          medication_taken: data.medication_taken,
+          insight_text: data.insight_text,
+          created_at: data.created_at,
+        };
+
+        setEntries((prev) => {
+          const updated = [...prev, newEntry].sort(
+            (a, b) =>
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+          );
+          // Keep only the last 7
+          return updated.slice(-7);
+        });
+      } catch (err) {
+        console.error("Failed to add glucose reading:", err);
+      }
+    },
+    [],
+  );
+
   return (
-    <GlucoseDataContext.Provider value={{ entries, addGlucoseReading }}>
+    <GlucoseDataContext.Provider value={{ entries, loading, addGlucoseReading }}>
       {children}
     </GlucoseDataContext.Provider>
   );

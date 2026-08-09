@@ -86,11 +86,8 @@ export default function DailyDashboard() {
   const onboardingData = data;
 
   async function handleGenerateInsight() {
-    // Append today's glucose reading to the trend data
     const glucoseNum = Number(glucose);
-    if (glucoseNum > 0) {
-      addGlucoseReading(glucoseNum);
-    }
+    if (glucoseNum <= 0) return;
 
     // Resolve meal label — use customMeal if "Other (Custom)" is selected and non-empty
     const mealLabel =
@@ -111,6 +108,8 @@ export default function DailyDashboard() {
     setIsGenerating(true);
     setInsight(null);
 
+    let insightText = "";
+
     try {
       const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
         method: "POST",
@@ -130,18 +129,21 @@ export default function DailyDashboard() {
       }
 
       const data = await response.json();
-      const reply =
+      insightText =
         data?.choices?.[0]?.message?.content ??
         "I wasn't able to generate an insight right now. Please try again.";
-      setInsight(reply);
+      setInsight(insightText);
     } catch (error) {
       console.error("Failed to generate insight:", error);
-      setInsight(
-        "We couldn't connect right now — please check your connection and try again.",
-      );
+      insightText =
+        "We couldn't connect right now — please check your connection and try again.";
+      setInsight(insightText);
     } finally {
       setIsGenerating(false);
     }
+
+    // Persist the full reading to Supabase (with the insight text)
+    await addGlucoseReading(glucoseNum, mealLabel, medicationTaken, insightText);
   }
 
   // Build a contextual greeting

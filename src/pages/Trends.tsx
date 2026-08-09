@@ -41,7 +41,80 @@ function CustomTooltip({
 
 /* ── Trends Page ──────────────────────────────────────────────────────── */
 export default function Trends() {
-  const { entries } = useGlucoseData();
+  const { entries, loading } = useGlucoseData();
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="animate-[fadeIn_300ms_ease-out]">
+        <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-lg shadow-slate-200/50">
+          {/* Skeleton header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="h-5 w-44 rounded-md bg-slate-100 animate-pulse" />
+              <div className="h-3 w-28 rounded-md bg-slate-100 animate-pulse mt-2" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-3 w-16 rounded-md bg-slate-100 animate-pulse" />
+              <div className="h-3 w-12 rounded-md bg-slate-100 animate-pulse" />
+            </div>
+          </div>
+          {/* Skeleton chart area */}
+          <div className="h-[260px] rounded-xl bg-slate-50 animate-pulse flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="text-slate-300"
+                aria-hidden="true"
+              >
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+              <span className="text-xs text-slate-400">Loading your trends…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state — no readings yet
+  if (entries.length === 0) {
+    return (
+      <div className="animate-[fadeIn_300ms_ease-out]">
+        <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-lg shadow-slate-200/50">
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-100">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-slate-400"
+                aria-hidden="true"
+              >
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-heading font-bold text-slate-900">
+              No readings yet
+            </h3>
+            <p className="text-xs text-slate-500 text-center max-w-[200px]">
+              Head over to Today&rsquo;s Log and submit your first blood glucose reading to see your trends here.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-[fadeIn_300ms_ease-out]">
@@ -53,7 +126,7 @@ export default function Trends() {
               7‑Day Glucose Trend
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Mon 22 &ndash; Sun 28 Jul
+              Your latest {entries.length} reading{entries.length !== 1 ? "s" : ""}
             </p>
           </div>
           {/* Legend tag */}
