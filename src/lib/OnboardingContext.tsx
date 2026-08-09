@@ -24,7 +24,7 @@ export interface OnboardingStep3Data {
   dietaryOther: string;
 }
 
-interface OnboardingData {
+export interface OnboardingData {
   step1: OnboardingStep1Data | null;
   step2: OnboardingStep2Data | null;
   step3: OnboardingStep3Data | null;
