@@ -27,15 +27,68 @@ try {
     results.push(`Welcome - "${name}": ${found ? '✅' : '❌'}`);
   }
 
-  // Click "Get Started" CTA to navigate to onboarding
+  // Click "Get Started" CTA — navigates to /auth since no session yet
   const getStartedBtn = page.getByRole('button', { name: /get started/i });
   if (await getStartedBtn.isVisible()) {
     await getStartedBtn.click();
     await page.waitForTimeout(500);
-    results.push('✅ Clicked "Get Started" — navigating to onboarding');
+    results.push('✅ Clicked "Get Started" — navigating to auth');
   } else {
     results.push('❌ "Get Started" button not found');
   }
+
+  // === AUTH: Sign up with test credentials ===
+  const testEmail = `smoke-${Date.now()}@diaglo-test.com`;
+  const testPassword = 'test123456';
+
+  // Check we're on the auth page
+  const authHeading = await page.locator('h1').textContent();
+  results.push('Auth heading: ' + authHeading);
+
+  // Switch to signup mode if on login
+  const signupToggle = page.getByRole('button', { name: /sign up/i });
+  if (await signupToggle.isVisible()) {
+    await signupToggle.click();
+    await page.waitForTimeout(300);
+    results.push('✅ Switched to signup mode');
+  }
+
+  // Fill credentials
+  await page.getByLabel('Email').fill(testEmail);
+  await page.getByLabel('Password').fill(testPassword);
+  results.push('✅ Filled email and password');
+
+  // Submit signup
+  const createBtn = page.getByRole('button', { name: /create account/i });
+  await createBtn.click();
+  await page.waitForTimeout(1500);
+  results.push('✅ Submitted signup form');
+
+  // Check if we got redirected (no email confirmation) or see a message
+  const currentUrl = page.url();
+  results.push('URL after signup: ' + currentUrl);
+
+  // If still on auth with a success message, email confirmation may be required
+  const successMsg = await page.locator('text=/check your email/i').isVisible().catch(() => false);
+  if (successMsg) {
+    // Email confirmation required — try logging in with the same creds
+    // (Supabase may still allow login if email confirm is not strictly enforced)
+    const loginToggle = page.getByRole('button', { name: /sign in/i });
+    if (await loginToggle.isVisible()) {
+      await loginToggle.click();
+      await page.waitForTimeout(300);
+    }
+    await page.getByLabel('Email').fill(testEmail);
+    await page.getByLabel('Password').fill(testPassword);
+    const signInBtn = page.getByRole('button', { name: /sign in/i });
+    await signInBtn.click();
+    await page.waitForTimeout(1500);
+    results.push('🔄 Attempted sign-in after signup');
+  }
+
+  // Verify we landed on onboarding step 1
+  const afterAuthUrl = page.url();
+  results.push('URL after auth flow: ' + afterAuthUrl);
 
   // === STEP 1: Age, Gender, Height, Weight ===
   // Use label-based locators to avoid picking up hidden inputs (e.g. agent chat)
@@ -45,7 +98,7 @@ try {
   results.push('✅ Filled Age, Height, Weight');
 
   // Select gender
-  const genderBtn = page.getByRole('radio', { name: 'Male' });
+  const genderBtn = page.getByRole('radio', { name: 'Male', exact: true });
   if (await genderBtn.isVisible()) {
     await genderBtn.click();
     results.push('✅ Gender selected: Male');
