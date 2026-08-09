@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useGlucoseData } from "../lib/GlucoseDataContext";
 import { useOnboarding } from "../lib/OnboardingContext";
+import { supabase } from "../lib/supabaseClient";
 import { buildWeeklyPrompt } from "../lib/GlucoseDataContext";
 import type { WeeklyStats } from "../lib/GlucoseDataContext";
 
@@ -374,26 +375,16 @@ export default function Trends() {
       console.log("=".repeat(72));
 
       try {
-        const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization:
-              "Bearer c41e97be3f058aac871e74dc1199ec28",
-          },
-          body: JSON.stringify({
-            model: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-            messages: [{ role: "user", content: prompt }],
-          }),
+        const response = await supabase.functions.invoke("generate-insight", {
+          body: { prompt },
         });
 
-        if (!response.ok) {
-          throw new Error(`AI/ML API error: ${response.status}`);
+        if (response.error) {
+          throw new Error(response.error.message || "Edge function error");
         }
 
-        const data = await response.json();
         setWeeklyInsight(
-          data?.choices?.[0]?.message?.content ??
+          response.data?.content ??
             "I wasn't able to generate a weekly insight right now. Please try again.",
         );
       } catch (error) {

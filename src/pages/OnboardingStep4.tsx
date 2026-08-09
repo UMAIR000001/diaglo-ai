@@ -1,3 +1,5 @@
+import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../lib/AuthContext";
 import ProgressSteps from "../components/ProgressSteps";
 import { useOnboarding } from "../lib/OnboardingContext";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +46,7 @@ function Row({ label, value }: { label: string; value: string }) {
 export default function OnboardingStep4() {
   const { data } = useOnboarding();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const s1 = data.step1;
   const s2 = data.step2;
   const s3 = data.step3;
@@ -54,11 +57,47 @@ export default function OnboardingStep4() {
     return null;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (!user) {
+      console.error("No authenticated user found");
+      navigate(ROUTES.AUTH, { replace: true });
+      return;
+    }
+    if (!s1 || !s2 || !s3) {
+      console.error("Onboarding data incomplete");
+      navigate(ROUTES.ONBOARDING_STEP1, { replace: true });
+      return;
+    }
+
     // Collect final payload
     const payload = { step1: s1, step2: s2, step3: s3 };
     console.log("🎉 Onboarding complete! Final payload:", payload);
-    // TODO: Send to Supabase / API
+
+    // Save to profiles table (upsert)
+    const { error } = await supabase.from("profiles").upsert({
+      id: user.id,
+      age: s1.age,
+      gender: s1.gender,
+      height_cm: s1.height,
+      weight_kg: s1.weight,
+      diabetes_type: s2.diabetesType,
+      diabetes_other: s2.diabetesOther || null,
+      medications: s2.medications || null,
+      symptoms: s2.symptoms || [],
+      health_conditions: s2.healthConditions || [],
+      activity_level: s3.activityLevel,
+      sleep_hours: s3.sleepHours,
+      sleep_quality: s3.sleepQuality,
+      hydration_cups: s3.hydrationCups,
+      dietary_preferences: s3.dietaryPreferences || [],
+      dietary_other: s3.dietaryOther || null,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Failed to save profile:", error);
+    }
+
     navigate(ROUTES.DASHBOARD, { replace: true });
   }
 
