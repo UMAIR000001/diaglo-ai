@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { HeartPulse } from "lucide-react";
 import { ROUTES } from "../lib/types";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const { session } = useAuth();
 
   return (
     <div className="relative min-h-dvh flex flex-col bg-gradient-to-b from-teal-50/60 via-white to-slate-50 overflow-hidden">
@@ -100,7 +102,9 @@ export default function Welcome() {
         style={{ animationDelay: "600ms", animationFillMode: "both" }}
       >
         <button
-          onClick={() => navigate(ROUTES.ONBOARDING_STEP1)}
+          onClick={() =>
+            navigate(session ? ROUTES.ONBOARDING_STEP1 : ROUTES.AUTH)
+          }
           className="w-full rounded-full py-4 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-heading font-semibold text-lg shadow-xl shadow-teal-500/30 hover:shadow-2xl hover:shadow-teal-500/40 hover:scale-[1.02] active:scale-[0.97] transition-all duration-200 ease-out"
         >
           Get Started

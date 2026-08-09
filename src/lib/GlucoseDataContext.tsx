@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { supabase } from "./supabaseClient";
+import { useAuth } from "./AuthContext";
 
 export interface GlucoseEntry {
   id: string;
@@ -68,16 +69,23 @@ function formatLabel(iso: string): string {
 }
 
 export function GlucoseDataProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<GlucoseEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /** Fetch the last 7 entries from Supabase, ordered by created_at ascending */
+  /** Fetch the last 7 entries for the current user from Supabase */
   const fetchLogs = useCallback(async () => {
+    if (!user) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from("daily_logs")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: true })
         .limit(7);
 
@@ -105,14 +113,14 @@ export function GlucoseDataProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
-  // Fetch logs on mount
+  // Fetch logs on mount and when user changes
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
 
-  /** Insert a new glucose reading into Supabase and update local state */
+  /** Insert a new glucose reading for the current user into Supabase */
   const addGlucoseReading = useCallback(
     async (
       glucose: number,
@@ -120,10 +128,12 @@ export function GlucoseDataProvider({ children }: { children: ReactNode }) {
       medicationTaken?: boolean,
       insightText?: string,
     ) => {
+      if (!user) return;
       try {
         const { data, error } = await supabase
           .from("daily_logs")
           .insert({
+            user_id: user.id,
             glucose_level: glucose,
             meal: meal ?? null,
             medication_taken: medicationTaken ?? null,
@@ -161,7 +171,7 @@ export function GlucoseDataProvider({ children }: { children: ReactNode }) {
         console.error("Failed to add glucose reading:", err);
       }
     },
-    [],
+    [user],
   );
 
   return (

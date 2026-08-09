@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useOnboarding } from "../lib/OnboardingContext";
 import { useGlucoseData } from "../lib/GlucoseDataContext";
+import { useAuth } from "../lib/AuthContext";
 import Trends from "./Trends";
 
 /** Calorie map per meal (used for the calorie badge) */
@@ -172,6 +173,8 @@ export default function DailyDashboard() {
   // Pull onboarding data in the background so it's ready to bundle
   const onboardingData = data;
 
+  const { signOut } = useAuth();
+
   async function handleGenerateInsight() {
     const glucoseNum = Number(glucose);
     if (glucoseNum <= 0) return;
@@ -259,7 +262,7 @@ export default function DailyDashboard() {
               <line x1="9" y1="21" x2="9" y2="9" />
             </svg>
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-heading font-bold text-slate-900">
               Daily Dashboard
             </h1>
@@ -267,6 +270,37 @@ export default function DailyDashboard() {
               Log your vitals and get personalised insights.
             </p>
           </div>
+          {/* Sign-out button */}
+          <button
+            type="button"
+            onClick={signOut}
+            aria-label="Sign out"
+            className="
+              flex items-center justify-center w-10 h-10 rounded-xl
+              border border-slate-200 bg-white text-slate-400
+              hover:text-destructive hover:border-destructive/30 hover:bg-red-50
+              transition-all duration-200 ease-out
+              active:scale-95
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500
+              shadow-sm
+            "
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
 
         {/* Context chip (background) */}
