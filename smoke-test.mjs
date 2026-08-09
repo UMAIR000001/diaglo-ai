@@ -8,6 +8,35 @@ try {
   await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
   results.push('✅ Page loaded');
 
+  // === WELCOME SCREEN ===
+  const pageTitle = await page.locator('h1').textContent();
+  results.push('Welcome heading: ' + pageTitle);
+
+  // Check for key welcome screen elements
+  const welcomeText = await page.locator('body').textContent();
+  const welcomeChecks = [
+    ['Title contains "Welcome to Diaglo AI"', /welcome to diaglo ai/i],
+    ['Motto text present', /culturally aware diabetes care assistant/i],
+    ['Trust card explains privacy', /your privacy matters/i],
+    ['Trust card explains data collection', /medical and lifestyle information/i],
+    ['CTA button "Get Started" visible', /get started/i],
+    ['Footer mentions "Secure"', /secure/i],
+  ];
+  for (const [name, regex] of welcomeChecks) {
+    const found = regex.test(welcomeText);
+    results.push(`Welcome - "${name}": ${found ? '✅' : '❌'}`);
+  }
+
+  // Click "Get Started" CTA to navigate to onboarding
+  const getStartedBtn = page.getByRole('button', { name: /get started/i });
+  if (await getStartedBtn.isVisible()) {
+    await getStartedBtn.click();
+    await page.waitForTimeout(500);
+    results.push('✅ Clicked "Get Started" — navigating to onboarding');
+  } else {
+    results.push('❌ "Get Started" button not found');
+  }
+
   // === STEP 1: Age, Gender, Height, Weight ===
   const inputs1 = page.locator('input');
   const inputCount1 = await inputs1.count();

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import Welcome from "./pages/Welcome";
 import OnboardingStep1 from "./pages/OnboardingStep1";
 import OnboardingStep2 from "./pages/OnboardingStep2";
 import OnboardingStep3 from "./pages/OnboardingStep3";
@@ -37,7 +38,7 @@ function OnboardingFlow() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={ROUTES.ONBOARDING_STEP1} replace />} />
+      <Route path="/" element={<Welcome />} />
 
       <Route
         path={ROUTES.ONBOARDING_STEP1}
