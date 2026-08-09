@@ -3,21 +3,108 @@ import { useOnboarding } from "../lib/OnboardingContext";
 import { useGlucoseData } from "../lib/GlucoseDataContext";
 import Trends from "./Trends";
 
-const MEAL_OPTIONS = [
-  "1 Roti + Daal (Lentils)",
-  "1 Roti + Sabzi (Vegetables)",
-  "1 Roti + Chicken / Meat Salan",
-  "2+ Rotis + Any Curry",
-  "Daal Chawal (Lentils & Rice)",
-  "Chicken / Beef Biryani",
-  "Pulao (Chicken / Mutton / Veg)",
-  "Paratha + Egg + Chai",
-  "Naan + Karahi / Kebab",
-  "Chai + Biscuits / Snacks (Samosa / Pakora)",
-  "Fast Food (Burger / Shawarma)",
-  "None (Fasting / Roza)",
-  "Other (Custom)",
-] as const;
+/** Calorie map per meal (used for the calorie badge) */
+const MEAL_CALORIES: Record<string, number> = {
+  // Breakfast
+  "Omelette (2 eggs)": 180,
+  "Scrambled Eggs (2 eggs)": 200,
+  "Boiled Eggs (2 eggs)": 155,
+  "Paratha + Egg + Chai": 550,
+  "Oatmeal with Milk": 350,
+  "Cereal with Milk": 300,
+  "Toast + Eggs": 300,
+  "Pancakes with Syrup": 450,
+  "Yogurt + Fruit": 250,
+  // Lunch
+  "1 Roti + Daal": 350,
+  "1 Roti + Sabzi": 300,
+  "1 Roti + Chicken/Meat Salan": 450,
+  "Daal Chawal": 450,
+  "Chicken Biryani (Lunch)": 600,
+  "Chicken Salad": 350,
+  "Grilled Chicken + Vegetables": 400,
+  "Chicken Sandwich": 400,
+  "Pasta": 500,
+  // Dinner
+  "2 Rotis + Curry": 550,
+  "Chicken/Beef Biryani (Dinner)": 600,
+  "Pulao": 550,
+  "Naan + Karahi/Kebab": 600,
+  "Grilled Fish + Vegetables": 350,
+  "Steak + Vegetables": 550,
+  "Chicken Soup": 220,
+  "Vegetable Soup": 150,
+  "Spaghetti Bolognese": 550,
+  // Snacks
+  "Fruit Salad": 180,
+  "Chai + Biscuits": 250,
+  "Apple": 95,
+  "Banana": 105,
+  "Orange": 60,
+  "Yogurt": 120,
+  "Nuts (30g)": 170,
+  "Popcorn (1 cup)": 50,
+  "Samosa (1 piece)": 150,
+  "Pakora (3 pieces)": 200,
+  "Chocolate Bar": 220,
+  "Chicken Shawarma": 450,
+};
+
+const MEAL_CATEGORIES: Record<string, readonly string[]> = {
+  Breakfast: [
+    "Omelette (2 eggs)",
+    "Scrambled Eggs (2 eggs)",
+    "Boiled Eggs (2 eggs)",
+    "Paratha + Egg + Chai",
+    "Oatmeal with Milk",
+    "Cereal with Milk",
+    "Toast + Eggs",
+    "Pancakes with Syrup",
+    "Yogurt + Fruit",
+  ],
+  Lunch: [
+    "1 Roti + Daal",
+    "1 Roti + Sabzi",
+    "1 Roti + Chicken/Meat Salan",
+    "Daal Chawal",
+    "Chicken Biryani (Lunch)",
+    "Chicken Salad",
+    "Grilled Chicken + Vegetables",
+    "Chicken Sandwich",
+    "Pasta",
+  ],
+  Dinner: [
+    "2 Rotis + Curry",
+    "Chicken/Beef Biryani (Dinner)",
+    "Pulao",
+    "Naan + Karahi/Kebab",
+    "Grilled Fish + Vegetables",
+    "Steak + Vegetables",
+    "Chicken Soup",
+    "Vegetable Soup",
+    "Spaghetti Bolognese",
+  ],
+  Snacks: [
+    "Fruit Salad",
+    "Chai + Biscuits",
+    "Apple",
+    "Banana",
+    "Orange",
+    "Yogurt",
+    "Nuts (30g)",
+    "Popcorn (1 cup)",
+    "Samosa (1 piece)",
+    "Pakora (3 pieces)",
+    "Chocolate Bar",
+    "Chicken Shawarma",
+  ],
+} as const;
+
+const FOOTER_OPTIONS = ["None (Fasting / Roza)", "Other (Custom)"] as const;
+
+function getCalories(meal: string): number | null {
+  return MEAL_CALORIES[meal] ?? null;
+}
 
 /** Build a comprehensive LLM prompt from onboarding + current vitals */
 function buildPrompt(
@@ -393,12 +480,38 @@ export default function DailyDashboard() {
             <option value="" disabled>
               Select a meal...
             </option>
-            {MEAL_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
+            {Object.entries(MEAL_CATEGORIES).map(([category, items]) => (
+              <optgroup key={category} label={category}>
+                {items.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </optgroup>
             ))}
+            <optgroup label="──────────">
+              {FOOTER_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </optgroup>
           </select>
+
+          {/* Calorie badge — shown when a mapped meal is selected */}
+          {(() => {
+            const cals = meal && meal !== "None (Fasting / Roza)" && meal !== "Other (Custom)" ? getCalories(meal) : null;
+            return cals !== null ? (
+              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold animate-[fadeIn_200ms_ease-out]">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 20V10" />
+                  <path d="M18 20V4" />
+                  <path d="M6 20v-4" />
+                </svg>
+                ~{cals} kcal
+              </div>
+            ) : null;
+          })()}
 
           {/* Dynamic "Other" input — appears when "Other (Custom)" is selected */}
           {meal === "Other (Custom)" && (
